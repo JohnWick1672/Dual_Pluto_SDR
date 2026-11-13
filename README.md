@@ -138,7 +138,6 @@ The end-to-end packet test confirmed that the recovered payload matched the orig
 
 The intended RF operating frequency is 2.4 GHz, subject to applicable authorization, equipment configuration, and lab requirements.
 
-**RF safety:** Do not connect a Pluto transmit port directly to a receive port. Before any conducted connection, verify the receiver's maximum input level and calculate the required attenuation, including cable and component losses. Begin with a safe, controlled setup.
 
 ### Software
 
