@@ -4,6 +4,8 @@ sys.path.insert(0, "src")
 from sdr_project.telemetry import generate_telemetry
 from sdr_project.packet import build_packet
 from sdr_project.packet import decode_packet
+from sdr_project.telemetry import decode_telemetry
+from sdr_project.packet_manager import PacketManager
 
 
 #Generate a random sequence of measurements
@@ -18,4 +20,18 @@ print(packet_type)
 print(sequence_number)
 print(decoded_payload)
 
-print(telemetry_stream == decoded_payload)
+
+recovered_telemetry = decode_telemetry(decoded_payload)
+print(f"Timestamp: {recovered_telemetry['timestamp']}")
+print(f"Temperature: {recovered_telemetry['temperature']} F")
+print(f"Battery:  {recovered_telemetry['battery']} %")
+print(f"Voltage:  {recovered_telemetry['voltage']} V")
+print(f"Current:  {recovered_telemetry['current']} A")
+
+manager = PacketManager()
+manager.sequence_number = 254
+
+for i in range(4):
+    print(manager.get_next_sequence_number())
+
+    

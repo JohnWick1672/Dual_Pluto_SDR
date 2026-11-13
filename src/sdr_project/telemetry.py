@@ -5,6 +5,16 @@ import random
 
 def generate_telemetry():
 
+    """"
+    Generate simulated spacecraft telemetry measurements and serialize them    into a binary payload.
+
+    Parameters:
+     None
+
+    Returns:
+     bytes: A 17-byte serialized telemetry payload.
+
+    """
 
     #Generating timestamp
     timestamp = int(time.time())
@@ -28,3 +38,20 @@ def generate_telemetry():
 
 
 
+def decode_telemetry(payload):
+
+    """
+    Deserialize a binary telemetry payload into readable measurements.
+
+    Parameters:
+        payload (bytes): The 17-byte serialized telemetry payload.
+
+    Returns:
+        dict: Dictionary where values can be accesed through the keys: timestamp, temperature, battery, voltage, and current.
+    """
+    #using known format of >'IfBff unpack the telemetry
+    timestamp, temperature, battery,voltage, current = struct.unpack('>IfBff', payload)
+
+    telemetry = {'timestamp': timestamp, 'temperature': temperature, 'battery': battery, 'voltage': voltage ,'current': current}
+
+    return telemetry
