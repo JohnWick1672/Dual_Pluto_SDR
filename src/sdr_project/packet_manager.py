@@ -1,3 +1,4 @@
+from sdr_project.packet import build_packet
 class PacketManager:
     """"
     Manage packet sequence numbers for telemetry transmission.
@@ -25,4 +26,20 @@ class PacketManager:
 
         return current_seq_num
 
+    def create_packet(self,packet_type,payload):
+        """"
+        Create packet accepts a packet type and a payload. It obtains the next sequence number and returns a fully built packet
+
+        Parameters:
+            packet_type (int): the type of packet being sent
+            payload (bytes): the payload data for transmission
+        
+        Returns:
+            packet(bytes): returns the packet fully constructed
+        """
+
+        current_seq = self.get_next_sequence_number()
+        packet = build_packet(packet_type, current_seq,payload)
+
+        return packet
 
