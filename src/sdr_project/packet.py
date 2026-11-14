@@ -1,4 +1,6 @@
 PREAMBLE = bytes.fromhex("AA CC F0 0F")
+REGULAR_TELEMETRY = 0
+EMERGENCY_TELEMETRY = 1
 
 def build_packet(packet_type, sequence_number, payload):
 
