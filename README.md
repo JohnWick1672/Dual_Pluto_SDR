@@ -6,9 +6,9 @@ A Python-based digital communications project using two ADALM-Pluto SDRs to simu
 
 The goal of this project is to build and characterize a packet-based wireless communications link between two software-defined radios (SDRs).
 
-One Pluto SDR will act as the simulated CubeSat transmitter, while the second will act as the ground-station receiver. The transmitter will generate spacecraft telemetry, encode it into packets, modulate the data, and transmit it. The receiver will capture the signal, recover the transmitted bits, validate the packets, and decode the telemetry.
+One Pluto SDR will act as the simulated CubeSat transmitter, while the second will act as the ground-station receiver. The transmitter generates spacecraft telemetry, encodes it into packets, modulates the data, and transmits it. The receiver captures the signal, recovers the transmitted bits, validates packets, and decodes the telemetry.
 
-The primary modulation scheme is **Binary Phase Shift Keying (BPSK)**. The project will first validate the communications chain in software before integrating the SDR hardware.
+The primary modulation scheme is **Binary Phase Shift Keying (BPSK)**. The communications chain will first be validated in software before integrating the SDR hardware.
 
 ## System Architecture
 
@@ -16,10 +16,12 @@ The primary modulation scheme is **Binary Phase Shift Keying (BPSK)**. The proje
 
 1. Generate simulated CubeSat telemetry.
 2. Serialize telemetry measurements into a binary payload.
-3. Construct a packet containing a preamble, header, payload, and CRC.
-4. Convert packet bits into BPSK symbols.
-5. Apply pulse shaping and prepare the waveform for transmission.
-6. Transmit the complex IQ waveform using the Pluto SDR.
+3. Determine the packet type based on telemetry thresholds.
+4. Construct a packet containing a preamble, header, payload, and CRC.
+5. Assign a sequence number to each packet.
+6. Convert packet bits into BPSK symbols.
+7. Apply pulse shaping and prepare the waveform for transmission.
+8. Transmit the complex IQ waveform using the Pluto SDR.
 
 ### Receiver
 
@@ -29,23 +31,26 @@ The primary modulation scheme is **Binary Phase Shift Keying (BPSK)**. The proje
 4. Detect packet boundaries using the preamble.
 5. Decode the packet header and payload.
 6. Verify packet integrity using the CRC.
-7. Deserialize and display the recovered telemetry.
+7. Track packet sequence numbers and identify missing packets.
+8. Deserialize and display the recovered telemetry.
 
 ## Telemetry Format
 
-The current telemetry generator simulates the following measurements:
+The telemetry generator currently simulates the following measurements:
 
 | Field | Description | Current simulation range |
 |---|---|---|
 | Timestamp | Unix timestamp | Current system time |
-| Temperature | Simulated spacecraft temperature | 20–30 °C |
-| Battery | Simulated battery level | 80–100% |
-| Voltage | Simulated bus voltage | 7.0–8.4 V |
-| Current | Simulated current consumption | 0.5–1.2 A |
+| Temperature | Simulated spacecraft temperature | 15–30 °C |
+| Battery | Simulated battery level | 40–100% |
+| Voltage | Simulated bus voltage | 5.0–8.4 V |
+| Current | Simulated current consumption | 0.5–1.5 A |
 
 The telemetry values are illustrative simulation values, not flight-system specifications.
 
-Telemetry is serialized into a 17-byte binary payload using Python's `struct` module.
+Telemetry is serialized into a 17-byte binary payload using Python's `struct` module. The receiver can deserialize the payload into readable measurements.
+
+The transmitter also classifies telemetry packets as regular or emergency based on predefined measurement thresholds.
 
 ## Packet Protocol
 
@@ -61,7 +66,7 @@ The current packet format is:
 The header contains:
 
 - **Packet type:** Identifies the packet category.
-- **Sequence number:** Identifies the packet sequence.
+- **Sequence number:** Identifies the packet sequence, ranging from 0 to 255 before rollover.
 - **Payload length:** Specifies the payload size in bytes, encoded big-endian.
 
 The CRC uses CRC-16-CCITT-FALSE parameters:
@@ -71,7 +76,9 @@ The CRC uses CRC-16-CCITT-FALSE parameters:
 - Final XOR: `0x0000`
 - CRC coverage: Header and payload; the preamble is excluded.
 
-The receiver checks the CRC before accepting the decoded payload. The CRC detects corrupted packets; it does not correct transmission errors.
+The receiver verifies the CRC before accepting the decoded payload. The CRC detects corrupted packets; it does not correct transmission errors.
+
+The receiver also tracks sequence numbers to identify missing and duplicate packets.
 
 ## Modulation and Signal Processing
 
@@ -91,10 +98,10 @@ The software currently includes:
 - Phase-offset channel model
 - Frequency-offset channel model
 - Initial frequency-offset estimation and correction
-- Basic Costas-style phase tracking
+- Costas-loop carrier phase tracking
 - Bit error rate (BER) calculation
 
-The current synchronization implementation is an initial symbol-rate simulation. Pulse shaping, oversampled waveform processing, matched filtering, packet acquisition, and timing recovery are still under development.
+The current DSP implementation is an initial symbol-rate simulation. Oversampled waveform processing, pulse shaping, matched filtering, symbol timing recovery, and packet acquisition are still under development.
 
 ## Current Development Status
 
@@ -106,23 +113,26 @@ The current synchronization implementation is an initial symbol-rate simulation.
 - [x] Initial carrier frequency and phase correction
 - [x] BER calculation
 - [x] Telemetry generation and binary serialization
+- [x] Telemetry deserialization into readable measurements
+- [x] Telemetry-based regular/emergency packet classification
 - [x] Packet construction with preamble and header
 - [x] CRC-16-CCITT-FALSE calculation and verification
 - [x] Packet decoding and payload recovery
-- [x] End-to-end software test: telemetry generation → packet construction → packet decoding → payload recovery
+- [x] Automatic packet sequence numbering and rollover
+- [x] Receiver-side sequence tracking and duplicate detection
+- [x] Packet-loss detection and cumulative packet-loss tracking
+- [x] Testing of multiple packets and packet sequence rollover
+- [x] End-to-end telemetry test with simulated packet loss
 
-The end-to-end packet test confirmed that the recovered payload matched the original serialized telemetry payload byte-for-byte.
+The end-to-end packet test verified telemetry generation, packet classification, packet construction, packet decoding, telemetry recovery, sequence-number rollover, and detection of a deliberately dropped packet.
 
 ### Planned development
 
-- [ ] Deserialize recovered telemetry into readable measurements
-- [ ] Implement automatic packet sequence numbering
-- [ ] Test multiple packets and packet types
 - [ ] Implement root-raised-cosine (RRC) pulse shaping
 - [ ] Add oversampling and matched filtering
 - [ ] Implement packet detection and timing recovery
 - [ ] Improve carrier synchronization for sampled SDR waveforms
-- [ ] Complete end-to-end BPSK link simulation
+- [ ] Complete end-to-end BPSK waveform simulation
 - [ ] Integrate both ADALM-Pluto SDRs
 - [ ] Demonstrate packet transmission and telemetry recovery over the RF link
 - [ ] Characterize BER, packet error rate (PER), EVM, throughput, and goodput under controlled channel conditions
@@ -136,8 +146,7 @@ The end-to-end packet test confirmed that the recovered payload matched the orig
 - External antennas for the over-the-air demonstration
 - VNA access for passive RF component and antenna characterization
 
-The intended RF operating frequency is 2.4 GHz, subject to applicable authorization, equipment configuration, and lab requirements.
-
+The intended RF operating frequency is 2.4 GHz, using two custom microstrip patch antennas.
 
 ### Software
 
@@ -150,7 +159,7 @@ The intended RF operating frequency is 2.4 GHz, subject to applicable authorizat
 - IPykernel
 - Visual Studio Code
 
-The SDR hardware interface and Pluto-specific software dependencies will be added and documented during hardware integration.
+The Pluto SDR hardware interface and associated software dependencies will be added during hardware integration.
 
 ## Project Structure
 
@@ -165,17 +174,17 @@ Dual_Pluto_SDR/
 │       ├── demodulation.py
 │       ├── metrics.py
 │       ├── packet.py
-│       └── telemetry.py
+│       ├── telemetry.py
+│       ├── packet_manager.py
+│       └── receiver.py
 │
 ├── scripts/
-│   └── (simulation and hardware test scripts)
+│   ├── plot_bpsk.py
+│   ├── test_link.py
+│   └── test_telemetry.py
 │
 ├── tests/
-│   └── (unit and integration tests)
-│
 ├── data/
-│   └── (measurement data and saved results)
-│
 ├── requirements.txt
 ├── README.md
 └── .gitignore
@@ -187,10 +196,12 @@ Dual_Pluto_SDR/
 |---|---|
 | `modulation.py` | BPSK symbol mapping |
 | `channel.py` | AWGN, phase, and frequency-offset channel models |
-| `demodulation.py` | BPSK decisions and initial carrier synchronization |
+| `demodulation.py` | BPSK decisions and carrier synchronization |
 | `metrics.py` | BER calculation |
 | `packet.py` | Packet construction, CRC calculation, and packet decoding |
-| `telemetry.py` | Simulated telemetry generation and binary serialization |
+| `telemetry.py` | Telemetry generation, serialization, decoding, and packet classification |
+| `packet_manager.py` | Packet creation and sequence-number management |
+| `receiver.py` | Packet decoding, sequence tracking, and packet-loss detection |
 
 ## Development Environment
 
