@@ -91,15 +91,3 @@ def decode_telemetry(payload):
 
     return telemetry
 
-
-
-
-#TEST
-
-test_telemetry = {'timestamp': 12984, 'temperature': 27, 'battery': 60, 'voltage': 7, 'current': 0.9}
-
-test_telemetry = struct.pack('>IfBff',test_telemetry['timestamp'],test_telemetry['temperature'], test_telemetry['battery'], test_telemetry['voltage'], test_telemetry['current'])
-
-packet_type = determine_packet_type(test_telemetry)
-
-print(packet_type)

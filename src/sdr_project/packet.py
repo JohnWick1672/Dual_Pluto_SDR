@@ -58,6 +58,11 @@ def decode_packet(packet):
     if not packet.startswith(PREAMBLE):
         raise ValueError("Invalid Packet Preamble")
 
+
+    #ensuring the packet has at least 8 bytes
+    if len(packet) < 8:
+        raise ValueError('Header must be 4 bytes long')
+
     #extract the header
     header = packet[4:8]
 
@@ -69,11 +74,22 @@ def decode_packet(packet):
     payload_start = 8
     payload_end = payload_start + payload_length
 
+    #Checking whether the packet contains at least payload_end bytes
+    if len(packet) < payload_end:
+        raise ValueError('Incomplete Packet Payload')
+    
     #actual payload data extracted from packet
     payload = packet[payload_start:payload_end]
 
+    
     #now to extract the crc
     crc_end = payload_end +2
+    #verify crc length
+    if len(packet) < crc_end:
+        raise ValueError('Missing or incomplete CRC')
+    if len(packet) > crc_end:
+        raise ValueError('Packet transmission exceeds expected length')
+
     received_crc = int.from_bytes(packet[payload_end:crc_end], byteorder= 'big')
 
     #calculate our crc from recieved data and compare to transmitted
