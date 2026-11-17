@@ -123,15 +123,23 @@ The current DSP implementation is an initial symbol-rate simulation. Oversampled
 - [x] Packet-loss detection and cumulative packet-loss tracking
 - [x] Testing of multiple packets and packet sequence rollover
 - [x] End-to-end telemetry test with simulated packet loss
+- [x] Root-raised-cosine (RRC) filter coefficient generation
+- [x] BPSK symbol upsampling (4 samples per symbol)
+- [x] RRC pulse shaping through digital convolution
+- [x] Time-domain and frequency-domain waveform inspection
+- [x] Sample-rate conversion from 40 kS/s to 1 MSPS (25× interpolation)
+- [x] Validation of complex IQ waveform generation
+- [x] Spectral comparison before and after interpolation
+- [x] Initial occupied-bandwidth estimation
 
 The end-to-end packet test verified telemetry generation, packet classification, packet construction, packet decoding, telemetry recovery, sequence-number rollover, and detection of a deliberately dropped packet.
 
 ### Planned development
 
-- [ ] Implement root-raised-cosine (RRC) pulse shaping
-- [ ] Add oversampling and matched filtering
+- [ ] Implement receive-side matched RRC filtering
+- [ ] Implement symbol timing recovery for oversampled waveforms
+- [ ] Adapt existing carrier frequency and phase synchronization for sampled SDR waveforms
 - [ ] Implement packet detection and timing recovery
-- [ ] Improve carrier synchronization for sampled SDR waveforms
 - [ ] Complete end-to-end BPSK waveform simulation
 - [ ] Integrate both ADALM-Pluto SDRs
 - [ ] Demonstrate packet transmission and telemetry recovery over the RF link
