@@ -26,25 +26,28 @@ The primary modulation scheme is **Binary Phase Shift Keying (BPSK)**. The commu
 ### Receiver
 
 1. Capture complex IQ samples using the second Pluto SDR.
-2. Apply receive filtering and synchronization.
-3. Recover the transmitted BPSK symbols and bits.
-4. Detect packet boundaries using the preamble.
-5. Decode the packet header and payload.
-6. Verify packet integrity using the CRC.
-7. Track packet sequence numbers and identify missing packets.
-8. Deserialize and display the recovered telemetry.
+2. Decimate the received signal to the baseband processing sample rate.
+3. Apply receive-side matched RRC filtering.
+4. Recover symbol timing using Gardner timing recovery.
+5. Correct carrier frequency offset and phase using the existing synchronization algorithms.
+6. Recover the transmitted BPSK symbols and bits.
+7. Detect packet boundaries using the preamble.
+8. Decode the packet header and payload.
+9. Verify packet integrity using the CRC.
+10. Track packet sequence numbers and identify missing packets.
+11. Deserialize and display the recovered telemetry.
 
 ## Telemetry Format
 
 The telemetry generator currently simulates the following measurements:
 
-| Field | Description | Current simulation range |
-|---|---|---|
-| Timestamp | Unix timestamp | Current system time |
-| Temperature | Simulated spacecraft temperature | 15–30 °C |
-| Battery | Simulated battery level | 40–100% |
-| Voltage | Simulated bus voltage | 5.0–8.4 V |
-| Current | Simulated current consumption | 0.5–1.5 A |
+| Field       | Description                      | Current simulation range |
+| ----------- | -------------------------------- | ------------------------ |
+| Timestamp   | Unix timestamp                   | Current system time      |
+| Temperature | Simulated spacecraft temperature | 15–30 °C                 |
+| Battery     | Simulated battery level          | 40–100%                  |
+| Voltage     | Simulated bus voltage            | 5.0–8.4 V                |
+| Current     | Simulated current consumption    | 0.5–1.5 A                |
 
 The telemetry values are illustrative simulation values, not flight-system specifications.
 
@@ -56,12 +59,12 @@ The transmitter also classifies telemetry packets as regular or emergency based 
 
 The current packet format is:
 
-| Field | Size | Description |
-|---|---:|---|
-| Preamble | 4 bytes | `AA CC F0 0F` |
-| Header | 4 bytes | Packet type, sequence number, payload length |
-| Payload | Variable | Serialized telemetry data |
-| CRC | 2 bytes | CRC-16-CCITT-FALSE |
+| Field    | Size     | Description                                  |
+| -------- | -------- | -------------------------------------------- |
+| Preamble | 4 bytes  | `AA CC F0 0F`                                |
+| Header   | 4 bytes  | Packet type, sequence number, payload length |
+| Payload  | Variable | Serialized telemetry data                    |
+| CRC      | 2 bytes  | CRC-16-CCITT-FALSE                           |
 
 The header contains:
 
@@ -87,21 +90,23 @@ BPSK is the primary modulation scheme.
 The current symbol mapping is:
 
 | Input bit | BPSK symbol |
-|---|---|
-| 0 | +1 + 0j |
-| 1 | -1 + 0j |
+| --------- | ----------- |
+| 0         | +1 + 0j     |
+| 1         | -1 + 0j     |
 
 The software currently includes:
 
 - BPSK modulation and hard-decision demodulation
-- Additive white Gaussian noise (AWGN) channel model
-- Phase-offset channel model
-- Frequency-offset channel model
-- Initial frequency-offset estimation and correction
+- AWGN, phase-offset, and frequency-offset channel models
+- Frequency-offset estimation and correction
 - Costas-loop carrier phase tracking
-- Bit error rate (BER) calculation
-
-The current DSP implementation is an initial symbol-rate simulation. Oversampled waveform processing, pulse shaping, matched filtering, symbol timing recovery, and packet acquisition are still under development.
+- BER calculation
+- RRC pulse shaping and waveform generation
+- Polyphase interpolation and decimation
+- Matched RRC filtering
+- Gardner timing error detection
+- PI timing loop filtering
+- Closed-loop symbol timing recovery
 
 ## Current Development Status
 
@@ -111,6 +116,7 @@ The current DSP implementation is an initial symbol-rate simulation. Oversampled
 - [x] BPSK modulation and basic demodulation
 - [x] AWGN, phase-offset, and frequency-offset channel models
 - [x] Initial carrier frequency and phase correction
+- [x] Costas-loop carrier phase tracking
 - [x] BER calculation
 - [x] Telemetry generation and binary serialization
 - [x] Telemetry deserialization into readable measurements
@@ -131,16 +137,22 @@ The current DSP implementation is an initial symbol-rate simulation. Oversampled
 - [x] Validation of complex IQ waveform generation
 - [x] Spectral comparison before and after interpolation
 - [x] Initial occupied-bandwidth estimation
-
-The end-to-end packet test verified telemetry generation, packet classification, packet construction, packet decoding, telemetry recovery, sequence-number rollover, and detection of a deliberately dropped packet.
+- [x] Receive-side decimation from 1 MSPS to 40 kS/s
+- [x] Receive-side matched RRC filtering
+- [x] Linear interpolation for fractional sample positions
+- [x] Gardner timing error detector
+- [x] PI timing loop filter
+- [x] Closed-loop symbol timing recovery
+- [x] Fractional timing-offset recovery in simulation
+- [x] Sample-clock mismatch recovery in simulation
 
 ### Planned development
 
-- [ ] Implement receive-side matched RRC filtering
-- [ ] Implement symbol timing recovery for oversampled waveforms
-- [ ] Adapt existing carrier frequency and phase synchronization for sampled SDR waveforms
-- [ ] Implement packet detection and timing recovery
+- [ ] Integrate existing frequency-offset estimation and correction into the oversampled receiver chain
+- [ ] Integrate the existing Costas loop into the oversampled receiver chain
 - [ ] Complete end-to-end BPSK waveform simulation
+- [ ] Implement preamble-based packet acquisition and synchronization
+- [ ] Validate end-to-end BER and packet error rate (PER) under simulated channel conditions
 - [ ] Integrate both ADALM-Pluto SDRs
 - [ ] Demonstrate packet transmission and telemetry recovery over the RF link
 - [ ] Characterize BER, packet error rate (PER), EVM, throughput, and goodput under controlled channel conditions
@@ -158,7 +170,7 @@ The intended RF operating frequency is 2.4 GHz, using two custom microstrip patc
 
 ### Software
 
-- Python 3.11
+- Python
 - NumPy
 - SciPy
 - Matplotlib
@@ -184,55 +196,19 @@ Dual_Pluto_SDR/
 │       ├── packet.py
 │       ├── telemetry.py
 │       ├── packet_manager.py
-│       └── receiver.py
+│       ├── receiver.py
+│       └── receiver_dsp.py
 │
 ├── scripts/
 │   ├── plot_bpsk.py
+│   ├── plot_tx_waveform.py
 │   ├── test_link.py
-│   └── test_telemetry.py
+│   ├── test_telemetry.py
+│   ├── test_resampling.py
+│   └── test_receiver_dsp.py
 │
 ├── tests/
 ├── data/
 ├── requirements.txt
 ├── README.md
 └── .gitignore
-```
-
-### Module descriptions
-
-| Module | Purpose |
-|---|---|
-| `modulation.py` | BPSK symbol mapping |
-| `channel.py` | AWGN, phase, and frequency-offset channel models |
-| `demodulation.py` | BPSK decisions and carrier synchronization |
-| `metrics.py` | BER calculation |
-| `packet.py` | Packet construction, CRC calculation, and packet decoding |
-| `telemetry.py` | Telemetry generation, serialization, decoding, and packet classification |
-| `packet_manager.py` | Packet creation and sequence-number management |
-| `receiver.py` | Packet decoding, sequence tracking, and packet-loss detection |
-
-## Development Environment
-
-Create and activate a Python virtual environment:
-
-```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
-
-Install the project dependencies:
-
-```powershell
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-Run scripts from the project root so that the source modules can be imported as expected.
-
-## Project Objective
-
-The final objective is to demonstrate a working two-node SDR telemetry link and evaluate its performance under controlled RF conditions.
-
-The project will distinguish between simulated results and measurements obtained from the physical SDR hardware. Final conclusions will be based on recorded data, repeatable test conditions, and measured performance.
-
-This is a ground-based communications demonstration and is not intended to represent a flight-qualified spacecraft communications system.
